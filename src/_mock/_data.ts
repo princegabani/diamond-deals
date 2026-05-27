@@ -1,3 +1,5 @@
+import { timeStamp } from 'console';
+
 import {
   _id,
   _price,
@@ -24,7 +26,6 @@ export const _myAccount = {
 export const _users = [...Array(24)].map((_, index) => ({
   id: _id(index),
   name: _fullName(index),
-  company: _company(index),
   isVerified: _boolean(index),
   avatarUrl: `/assets/images/avatar/avatar-${index + 1}.webp`,
   status: index % 4 ? 'active' : 'banned',
@@ -174,7 +175,7 @@ export const _notifications = [
   {
     id: _id(2),
     title: _fullName(2),
-    description: 'answered to your comment on the Minimal',
+    description: 'answered to your comment on the Site',
     avatarUrl: '/assets/images/avatar/avatar-2.webp',
     type: 'friend-interactive',
     postedAt: _times(2),
@@ -208,3 +209,45 @@ export const _notifications = [
     isUnRead: false,
   },
 ];
+
+//-------------------------------------------------------
+
+export interface Diamond {
+  id: string;
+  certiNumber: string;
+  shape: string;
+  carat: number;
+  price: number;
+  remark: string;
+  status: string;
+}
+
+export const _deals: Diamond[] = [
+{
+    id: '1',
+    certiNumber: 'LG705545344',
+    shape: 'Round',
+    carat: 5.1,
+    price: 91999,
+    remark: 'PS',
+    status: 'pending',
+  },
+  {
+    id: '2',
+    certiNumber: 'LG705545345',
+    shape: 'Princess',
+    carat: 3.2,
+    price: 49999,
+    remark: 'VS1',
+    status: 'approved',
+  },
+  {
+    id: '3',
+    certiNumber: 'LG705545346',
+    shape: 'Oval',
+    carat: 4.0,
+    price: 69999,
+    remark: 'SI',
+    status: 'pending',
+  },
+]

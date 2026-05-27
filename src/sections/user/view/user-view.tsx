@@ -4,8 +4,13 @@ import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Table from '@mui/material/Table';
 import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import TextField from '@mui/material/TextField';
 import TableBody from '@mui/material/TableBody';
 import Typography from '@mui/material/Typography';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import TableContainer from '@mui/material/TableContainer';
 import TablePagination from '@mui/material/TablePagination';
 
@@ -23,21 +28,54 @@ import { UserTableToolbar } from '../user-table-toolbar';
 import { emptyRows, applyFilter, getComparator } from '../utils';
 
 import type { UserProps } from '../user-table-row';
+// import { registerUser } from 'src/services/auth.service';
 
 // ----------------------------------------------------------------------
 
 export function UserView() {
   const table = useTable();
 
+  const [users, setUsers] = useState<UserProps[]>([]);
+  const [open, setOpen] = useState(false);
+
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    role: '',
+  });
+
   const [filterName, setFilterName] = useState('');
 
   const dataFiltered: UserProps[] = applyFilter({
-    inputData: _users,
+    inputData: users,
     comparator: getComparator(table.order, table.orderBy),
     filterName,
   });
 
   const notFound = !dataFiltered.length && !!filterName;
+
+  const storeToDatabase = async () => {
+    try {
+      if (!newUser.name || !newUser.email || !newUser.role) {
+        return;
+      }
+
+      // await registerUser({
+      //   ...newUser,
+      //   status: 'Inactive',
+      // });
+
+      setNewUser({
+        name: '',
+        email: '',
+        role: '',
+      });
+
+      setOpen(false);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   return (
     <DashboardContent>
@@ -55,6 +93,7 @@ export function UserView() {
           variant="contained"
           color="inherit"
           startIcon={<Iconify icon="mingcute:add-line" />}
+          onClick={() => setOpen(true)}
         >
           New user
         </Button>
@@ -76,18 +115,18 @@ export function UserView() {
               <UserTableHead
                 order={table.order}
                 orderBy={table.orderBy}
-                rowCount={_users.length}
+                rowCount={users.length}
                 numSelected={table.selected.length}
                 onSort={table.onSort}
                 onSelectAllRows={(checked) =>
                   table.onSelectAllRows(
                     checked,
-                    _users.map((user) => user.id)
+                    users.map((user) => user.id)
                   )
                 }
                 headLabel={[
                   { id: 'name', label: 'Name' },
-                  { id: 'company', label: 'Company' },
+                  { id: 'email', label: 'Email' },
                   { id: 'role', label: 'Role' },
                   { id: 'isVerified', label: 'Verified', align: 'center' },
                   { id: 'status', label: 'Status' },
@@ -111,7 +150,7 @@ export function UserView() {
 
                 <TableEmptyRows
                   height={68}
-                  emptyRows={emptyRows(table.page, table.rowsPerPage, _users.length)}
+                  emptyRows={emptyRows(table.page, table.rowsPerPage, users.length)}
                 />
 
                 {notFound && <TableNoData searchQuery={filterName} />}
@@ -123,13 +162,54 @@ export function UserView() {
         <TablePagination
           component="div"
           page={table.page}
-          count={_users.length}
+          count={users.length}
           rowsPerPage={table.rowsPerPage}
           onPageChange={table.onChangePage}
           rowsPerPageOptions={[5, 10, 25]}
           onRowsPerPageChange={table.onChangeRowsPerPage}
         />
       </Card>
+
+      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Create New User</DialogTitle>
+
+        <DialogContent sx={{ mt: 1 }}>
+          <TextField
+            fullWidth
+            required
+            label="Name"
+            margin="normal"
+            value={newUser.name}
+            onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+          />
+
+          <TextField
+            fullWidth
+            required
+            label="Email"
+            margin="normal"
+            value={newUser.email}
+            onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+          />
+
+          <TextField
+            fullWidth
+            required
+            label="Role"
+            margin="normal"
+            value={newUser.role}
+            onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+          />
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setOpen(false)}>Cancel</Button>
+
+          <Button variant="contained" onClick={storeToDatabase}>
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
     </DashboardContent>
   );
 }

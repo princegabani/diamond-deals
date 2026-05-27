@@ -20,7 +20,7 @@ export type UserProps = {
   name: string;
   role: string;
   status: string;
-  company: string;
+  email: string;
   avatarUrl: string;
   isVerified: boolean;
 };
@@ -62,7 +62,7 @@ export function UserTableRow({ row, selected, onSelectRow }: UserTableRowProps) 
           </Box>
         </TableCell>
 
-        <TableCell>{row.company}</TableCell>
+        <TableCell>{row.email}</TableCell>
 
         <TableCell>{row.role}</TableCell>
 

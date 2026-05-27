@@ -11,6 +11,8 @@ import InputAdornment from '@mui/material/InputAdornment';
 
 import { useRouter } from 'src/routes/hooks';
 
+import { login } from 'src/services/auth.service';
+
 import { Iconify } from 'src/components/iconify';
 
 // ----------------------------------------------------------------------
@@ -19,10 +21,24 @@ export function SignInView() {
   const router = useRouter();
 
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSignIn = useCallback(() => {
-    router.push('/');
-  }, [router]);
+  const handleSignIn = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      await login(email, password);
+
+      // success → redirect
+      router.push('/');
+    } catch (error: any) {
+      alert(error?.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  }, [email, password, router]);
 
   const renderForm = (
     <Box
@@ -43,22 +59,17 @@ export function SignInView() {
         }}
       />
 
-      <Link variant="body2" color="inherit" sx={{ mb: 1.5 }}>
-        Forgot password?
-      </Link>
-
       <TextField
         fullWidth
-        name="password"
         label="Password"
-        defaultValue="@demo1234"
         type={showPassword ? 'text' : 'password'}
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
         slotProps={{
-          inputLabel: { shrink: true },
           input: {
             endAdornment: (
               <InputAdornment position="end">
-                <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                <IconButton onClick={() => setShowPassword(!showPassword)}>
                   <Iconify icon={showPassword ? 'solar:eye-bold' : 'solar:eye-closed-bold'} />
                 </IconButton>
               </InputAdornment>
@@ -68,15 +79,19 @@ export function SignInView() {
         sx={{ mb: 3 }}
       />
 
+      <Link variant="body2" color="inherit" sx={{ mb: 1.5 }}>
+        Forgot password?
+      </Link>
+
       <Button
         fullWidth
         size="large"
-        type="submit"
         color="inherit"
         variant="contained"
         onClick={handleSignIn}
+        disabled={loading}
       >
-        Sign in
+        {loading ? 'Signing in...' : 'Sign in'}
       </Button>
     </Box>
   );
@@ -93,42 +108,15 @@ export function SignInView() {
         }}
       >
         <Typography variant="h5">Sign in</Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            color: 'text.secondary',
-          }}
-        >
-          Don’t have an account?
-          <Link variant="subtitle2" sx={{ ml: 0.5 }}>
-            Get started
-          </Link>
-        </Typography>
       </Box>
+
       {renderForm}
-      <Divider sx={{ my: 3, '&::before, &::after': { borderTopStyle: 'dashed' } }}>
-        <Typography
-          variant="overline"
-          sx={{ color: 'text.secondary', fontWeight: 'fontWeightMedium' }}
-        >
-          OR
-        </Typography>
-      </Divider>
-      <Box
-        sx={{
-          gap: 1,
-          display: 'flex',
-          justifyContent: 'center',
-        }}
-      >
-        <IconButton color="inherit">
+
+      <Divider sx={{ my: 3 }}>OR</Divider>
+
+      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+        <IconButton>
           <Iconify width={22} icon="socials:google" />
-        </IconButton>
-        <IconButton color="inherit">
-          <Iconify width={22} icon="socials:github" />
-        </IconButton>
-        <IconButton color="inherit">
-          <Iconify width={22} icon="socials:twitter" />
         </IconButton>
       </Box>
     </>

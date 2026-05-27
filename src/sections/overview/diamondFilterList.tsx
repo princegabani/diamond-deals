@@ -1,7 +1,10 @@
 import * as XLSX from 'xlsx';
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 
+import ChatIcon from '@mui/icons-material/Chat';
 import SearchIcon from '@mui/icons-material/Search';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
 import {
   Box,
   Typography,
@@ -13,9 +16,13 @@ import {
   TableHead,
   TableRow,
   Paper,
+  IconButton,
+  Button,
 } from '@mui/material';
 
-// Diamond Type
+// ------------------------------
+// TYPE
+// ------------------------------
 interface Diamond {
   id: number;
   origin: 'Natural' | 'Lab Grown';
@@ -24,69 +31,150 @@ interface Diamond {
   color: string;
   clarity: string;
   price: number;
+
+  certificate?: string;
+  video?: string;
 }
 
+// ------------------------------
+// COLUMN MAP
+// ------------------------------
+const COLUMN_MAP: Record<string, string[]> = {
+  id: ['id'],
+  origin: ['origin', 'type'],
+  shape: ['shape', 'cut'],
+  carat: ['carat', 'weight', 'ct', 'crt'],
+  color: ['color', 'colour'],
+  clarity: ['clarity', 'purity'],
+  price: ['price', 'amount', 'cost', 'rate', 'value', 'buy total price'],
+
+  certificate: ['certificate', 'certificate url', 'cert'],
+  video: ['video', 'video url', 'diamond video'],
+};
+
+// ------------------------------
+// HELPERS
+// ------------------------------
+const normalizeKey = (key: string) => key.toLowerCase().replace(/\s+/g, '');
+
+const findValue = (row: any, keys: string[]) => {
+  for (const key of keys) {
+    const normalized = normalizeKey(key);
+
+    const matchKey = Object.keys(row).find((k) => normalizeKey(k) === normalized);
+
+    if (matchKey && row[matchKey] !== undefined && row[matchKey] !== '') {
+      return row[matchKey];
+    }
+  }
+  return undefined;
+};
+
+// ------------------------------
+// COMPONENT
+// ------------------------------
 const DiamondFilterList: React.FC = () => {
   const [diamonds, setDiamonds] = useState<Diamond[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Load Excel file
+  // ------------------------------
+  // FILE UPLOAD
+  // ------------------------------
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
+
     reader.onload = (e) => {
       const data = e.target?.result;
       if (!data) return;
 
       const workbook = XLSX.read(data, { type: 'binary' });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const jsonData: any[] = XLSX.utils.sheet_to_json(sheet);
+      const sheet = workbook.SheetNames[0];
+      const jsonData: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[sheet]);
 
-      // Map Excel rows to Diamond type
-      const diamondData: Diamond[] = jsonData.map((row, index) => ({
-        id: row.ID || index + 1,
-        origin: row.Origin || 'Natural',
-        shape: row.Shape || '',
-        carat: parseFloat(row.Carat) || 0,
-        color: row.Color || '',
-        clarity: row.Clarity || '',
-        price: parseFloat(row.Amount) || 0,
-      }));
+      const diamondData: Diamond[] = jsonData.map((row, index) => {
+        const carat = findValue(row, COLUMN_MAP.carat);
+        const price = findValue(row, COLUMN_MAP.price);
+
+        return {
+          id: Number(findValue(row, COLUMN_MAP.id)) || index + 1,
+          origin: findValue(row, COLUMN_MAP.origin) || 'Natural',
+          shape: findValue(row, COLUMN_MAP.shape) || '',
+          carat: parseFloat(carat) || 0,
+          color: findValue(row, COLUMN_MAP.color) || '',
+          clarity: findValue(row, COLUMN_MAP.clarity) || '',
+          price: parseFloat(price) || 0,
+
+          certificate: findValue(row, COLUMN_MAP.certificate),
+          video: findValue(row, COLUMN_MAP.video),
+        };
+      });
 
       setDiamonds(diamondData);
     };
+
     reader.readAsBinaryString(file);
   };
 
-  // Filter Diamonds (example: by search query)
+  // ------------------------------
+  // FILTER
+  // ------------------------------
   const filteredDiamonds = useMemo(() => {
-    const query = searchQuery.toLowerCase();
+    const q = searchQuery.toLowerCase();
+
     return diamonds.filter(
       (d) =>
-        d.shape.toLowerCase().includes(query) ||
-        d.color.toLowerCase().includes(query) ||
-        d.clarity.toLowerCase().includes(query)
+        d.shape.toLowerCase().includes(q) ||
+        d.color.toLowerCase().includes(q) ||
+        d.clarity.toLowerCase().includes(q) ||
+        d.carat.toString().includes(q)
     );
   }, [diamonds, searchQuery]);
 
+  const openWhatsApp = (phone: string, message: string) => {
+    const cleanPhone = phone.replace(/\D/g, '');
+    const text = encodeURIComponent(message);
+
+    // App URLs
+    const whatsappApp = `whatsapp://send?phone=${cleanPhone}&text=${text}`;
+    const whatsappBusiness = `whatsapp-business://send?phone=${cleanPhone}&text=${text}`;
+
+    // Web fallback
+    const webUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${text}`;
+
+    // Try normal WhatsApp first
+    window.location.href = whatsappApp;
+
+    // Try Business WhatsApp if normal app fails
+    setTimeout(() => {
+      window.location.href = whatsappBusiness;
+    }, 800);
+
+    // Final fallback to browser
+    setTimeout(() => {
+      window.open(webUrl, '_blank');
+    }, 1600);
+  };
+
+  // ------------------------------
+  // UI
+  // ------------------------------
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
         Diamond Inventory
       </Typography>
 
-      <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} />
+      <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} />
 
       <TextField
         fullWidth
         size="small"
-        placeholder="Search by Shape, Color, or Clarity..."
+        placeholder="Search..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        variant="outlined"
         sx={{ mt: 2, mb: 2 }}
         InputProps={{
           startAdornment: <SearchIcon sx={{ mr: 1 }} />,
@@ -98,24 +186,70 @@ const DiamondFilterList: React.FC = () => {
           <TableHead>
             <TableRow>
               <TableCell>ID</TableCell>
-              <TableCell>Origin</TableCell>
               <TableCell>Shape</TableCell>
-              <TableCell align="right">Carat</TableCell>
+              <TableCell>Carat</TableCell>
               <TableCell>Color</TableCell>
               <TableCell>Clarity</TableCell>
-              <TableCell align="right">Price</TableCell>
+              <TableCell>Price</TableCell>
+              <TableCell />
+              {/* <TableCell>Certificate</TableCell>
+              <TableCell>Video</TableCell>
+              <TableCell>Chat</TableCell> */}
             </TableRow>
           </TableHead>
+
           <TableBody>
             {filteredDiamonds.map((d) => (
-              <TableRow key={d.id}>
+              <TableRow key={d.id} hover>
                 <TableCell>{d.id}</TableCell>
-                <TableCell>{d.origin}</TableCell>
                 <TableCell>{d.shape}</TableCell>
-                <TableCell align="right">{d.carat}</TableCell>
+                <TableCell>{d.carat}</TableCell>
                 <TableCell>{d.color}</TableCell>
                 <TableCell>{d.clarity}</TableCell>
-                <TableCell align="right">${d.price.toLocaleString()}</TableCell>
+                <TableCell>${d.price.toLocaleString()}</TableCell>
+
+                {/* Certificate */}
+                <TableCell>
+                  {d.certificate ? (
+                    <IconButton href={d.certificate} target="_blank" rel="noopener noreferrer">
+                      <PictureAsPdfIcon color="error" />
+                    </IconButton>
+                  ) : (
+                    ''
+                  )}
+
+                  {/* Video */}
+                  {d.video ? (
+                    <IconButton href={d.video} target="_blank" rel="noopener noreferrer">
+                      <VideoLibraryIcon color="primary" />
+                    </IconButton>
+                  ) : (
+                    ''
+                  )}
+
+                  {/* Chat Button */}
+                  <Button
+                    color="primary"
+                    size="small"
+                    startIcon={<ChatIcon />}
+                    onClick={() => {
+                      const message = `
+                                        Hi, I’m interested in this diamond:
+
+ID: ${d.id}
+Shape: ${d.shape}
+Carat: ${d.carat}
+Color: ${d.color}
+Clarity: ${d.clarity}
+Price: $${d.price.toLocaleString()}
+    `.trim();
+
+                      openWhatsApp('61404995273', message);
+                    }}
+                  >
+                    {' '}
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -126,6 +260,138 @@ const DiamondFilterList: React.FC = () => {
 };
 
 export default DiamondFilterList;
+
+// import * as XLSX from 'xlsx';
+// import React, { useState, useMemo, useCallback } from 'react';
+
+// import SearchIcon from '@mui/icons-material/Search';
+// import {
+//   Box,
+//   Typography,
+//   TextField,
+//   Table,
+//   TableBody,
+//   TableCell,
+//   TableContainer,
+//   TableHead,
+//   TableRow,
+//   Paper,
+// } from '@mui/material';
+
+// // Diamond Type
+// interface Diamond {
+//   id: number;
+//   origin: 'Natural' | 'Lab Grown';
+//   shape: string;
+//   carat: number;
+//   color: string;
+//   clarity: string;
+//   price: number;
+// }
+
+// const DiamondFilterList: React.FC = () => {
+//   const [diamonds, setDiamonds] = useState<Diamond[]>([]);
+//   const [searchQuery, setSearchQuery] = useState('');
+
+//   // Load Excel file
+//   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+//     const file = event.target.files?.[0];
+//     if (!file) return;
+
+//     const reader = new FileReader();
+//     reader.onload = (e) => {
+//       const data = e.target?.result;
+//       if (!data) return;
+
+//       const workbook = XLSX.read(data, { type: 'binary' });
+//       const sheetName = workbook.SheetNames[0];
+//       const sheet = workbook.Sheets[sheetName];
+//       const jsonData: any[] = XLSX.utils.sheet_to_json(sheet);
+
+//       // Map Excel rows to Diamond type
+//       const diamondData: Diamond[] = jsonData.map((row, index) => ({
+//         id: row.ID || index + 1,
+//         origin: row.Origin || 'Natural',
+//         shape: row.Shape || '',
+//         carat: parseFloat(row.Carat) || 0,
+//         color: row.Color || '',
+//         clarity: row.Clarity || '',
+//         price: parseFloat(row.Amount) || 0,
+//       }));
+
+//       setDiamonds(diamondData);
+//     };
+//     reader.readAsBinaryString(file);
+//   };
+
+//   // Filter Diamonds (example: by search query)
+//   const filteredDiamonds = useMemo(() => {
+//     const query = searchQuery.toLowerCase();
+//     return diamonds.filter(
+//       (d) =>
+//         d.shape.toLowerCase().includes(query) ||
+//         d.color.toLowerCase().includes(query) ||
+//         d.clarity.toLowerCase().includes(query)
+//     );
+//   }, [diamonds, searchQuery]);
+
+//   return (
+//     <Box sx={{ p: 3 }}>
+//       <Typography variant="h4" gutterBottom>
+//         Diamond Inventory
+//       </Typography>
+
+//       <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} />
+
+//       <TextField
+//         fullWidth
+//         size="small"
+//         placeholder="Search by Shape, Color, or Clarity..."
+//         value={searchQuery}
+//         onChange={(e) => setSearchQuery(e.target.value)}
+//         variant="outlined"
+//         sx={{ mt: 2, mb: 2 }}
+//         InputProps={{
+//           startAdornment: <SearchIcon sx={{ mr: 1 }} />,
+//         }}
+//       />
+
+//       <TableContainer component={Paper}>
+//         <Table>
+//           <TableHead>
+//             <TableRow>
+//               <TableCell>ID</TableCell>
+//               <TableCell>Origin</TableCell>
+//               <TableCell>Shape</TableCell>
+//               <TableCell align="right">Carat</TableCell>
+//               <TableCell>Color</TableCell>
+//               <TableCell>Clarity</TableCell>
+//               <TableCell align="right">Price</TableCell>
+//             </TableRow>
+//           </TableHead>
+//           <TableBody>
+//             {filteredDiamonds.map((d) => (
+//               <TableRow key={d.id}>
+//                 <TableCell>{d.id}</TableCell>
+//                 <TableCell>{d.origin}</TableCell>
+//                 <TableCell>{d.shape}</TableCell>
+//                 <TableCell align="right">{d.carat}</TableCell>
+//                 <TableCell>{d.color}</TableCell>
+//                 <TableCell>{d.clarity}</TableCell>
+//                 <TableCell align="right">${d.price.toLocaleString()}</TableCell>
+//               </TableRow>
+//             ))}
+//           </TableBody>
+//         </Table>
+//       </TableContainer>
+//     </Box>
+//   );
+// };
+
+// export default DiamondFilterList;
+
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 // import React, { useState, useMemo, useCallback } from 'react';
 
 // import SearchIcon from '@mui/icons-material/Search';

@@ -9,6 +9,7 @@ import { styled, useTheme } from '@mui/material/styles';
 import { RouterLink } from 'src/routes/components';
 
 import { logoClasses } from './classes';
+import singleLogoPandora from './Vector.png';
 
 // ----------------------------------------------------------------------
 
@@ -182,7 +183,12 @@ export function Logo({
       ]}
       {...other}
     >
-      {isSingle ? singleLogo : fullLogo}
+      {/* {isSingle ? singleLogoPandora : fullLogo} */}
+      {isSingle ? (
+        <img src={singleLogoPandora} alt="Logo" style={{ width: '100%', height: '100%' }} />
+      ) : (
+        fullLogo
+      )}
     </LogoRoot>
   );
 }
