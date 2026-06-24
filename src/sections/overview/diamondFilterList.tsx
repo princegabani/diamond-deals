@@ -18,6 +18,7 @@ import {
   Paper,
   IconButton,
   Button,
+  Chip,
 } from '@mui/material';
 
 // ------------------------------
@@ -31,7 +32,6 @@ interface Diamond {
   color: string;
   clarity: string;
   price: number;
-
   certificate?: string;
   video?: string;
 }
@@ -47,7 +47,6 @@ const COLUMN_MAP: Record<string, string[]> = {
   color: ['color', 'colour'],
   clarity: ['clarity', 'purity'],
   price: ['price', 'amount', 'cost', 'rate', 'value', 'buy total price'],
-
   certificate: ['certificate', 'certificate url', 'cert'],
   video: ['video', 'video url', 'diamond video'],
 };
@@ -56,6 +55,8 @@ const COLUMN_MAP: Record<string, string[]> = {
 // HELPERS
 // ------------------------------
 const normalizeKey = (key: string) => key.toLowerCase().replace(/\s+/g, '');
+
+const normalize = (value: string) => (value || '').toLowerCase().replace(/\s+/g, '');
 
 const findValue = (row: any, keys: string[]) => {
   for (const key of keys) {
@@ -71,11 +72,55 @@ const findValue = (row: any, keys: string[]) => {
 };
 
 // ------------------------------
+// FILTER TYPE
+// ------------------------------
+type Filters = {
+  shape: string[];
+  color: string[];
+  clarity: string[];
+};
+
+// ------------------------------
+// YOUR SHAPE ICON IMAGES
+// ------------------------------
+const SHAPE_ICONS: Record<string, string> = {
+  Round: '/icons/shapes/round.png',
+  Oval: '/icons/shapes/oval.png',
+  Princess: '/icons/shapes/princess.png',
+  Cushion: '/icons/shapes/cushion.png',
+  Radiant: '/icons/shapes/radiant.png',
+  Emerald: '/icons/shapes/emerald.png',
+  Pear: '/icons/shapes/pear.png',
+  Marquise: '/icons/shapes/marquise.png',
+  Asscher: '/icons/shapes/asscher.png',
+};
+
+// ------------------------------
 // COMPONENT
 // ------------------------------
 const DiamondFilterList: React.FC = () => {
   const [diamonds, setDiamonds] = useState<Diamond[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [filters, setFilters] = useState<Filters>({
+    shape: [],
+    color: [],
+    clarity: [],
+  });
+
+  // ------------------------------
+  // TOGGLE FILTER
+  // ------------------------------
+  const toggleFilter = (key: keyof Filters, value: string) => {
+    setFilters((prev) => {
+      const exists = prev[key].includes(value);
+
+      return {
+        ...prev,
+        [key]: exists ? prev[key].filter((v) => v !== value) : [...prev[key], value],
+      };
+    });
+  };
 
   // ------------------------------
   // FILE UPLOAD
@@ -106,7 +151,6 @@ const DiamondFilterList: React.FC = () => {
           color: findValue(row, COLUMN_MAP.color) || '',
           clarity: findValue(row, COLUMN_MAP.clarity) || '',
           price: parseFloat(price) || 0,
-
           certificate: findValue(row, COLUMN_MAP.certificate),
           video: findValue(row, COLUMN_MAP.video),
         };
@@ -119,42 +163,54 @@ const DiamondFilterList: React.FC = () => {
   };
 
   // ------------------------------
-  // FILTER
+  // FILTER LOGIC (INCLUDES MATCH)
   // ------------------------------
   const filteredDiamonds = useMemo(() => {
     const q = searchQuery.toLowerCase();
 
-    return diamonds.filter(
-      (d) =>
-        d.shape.toLowerCase().includes(q) ||
-        d.color.toLowerCase().includes(q) ||
-        d.clarity.toLowerCase().includes(q) ||
-        d.carat.toString().includes(q)
-    );
-  }, [diamonds, searchQuery]);
+    return diamonds.filter((d) => {
+      const matchSearch =
+        normalize(d.shape).includes(q) ||
+        normalize(d.color).includes(q) ||
+        normalize(d.clarity).includes(q) ||
+        d.carat.toString().includes(q);
 
+      if (!matchSearch) return false;
+
+      if (filters.shape.length > 0) {
+        const ok = filters.shape.some((f) => normalize(d.shape).includes(normalize(f)));
+        if (!ok) return false;
+      }
+
+      if (filters.color.length > 0) {
+        const ok = filters.color.some((f) => normalize(d.color).includes(normalize(f)));
+        if (!ok) return false;
+      }
+
+      if (filters.clarity.length > 0) {
+        const ok = filters.clarity.some((f) => normalize(d.clarity).includes(normalize(f)));
+        if (!ok) return false;
+      }
+
+      return true;
+    });
+  }, [diamonds, searchQuery, filters]);
+
+  // ------------------------------
+  // WHATSAPP
+  // ------------------------------
   const openWhatsApp = (phone: string, message: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
     const text = encodeURIComponent(message);
 
-    // App URLs
-    const whatsappApp = `whatsapp://send?phone=${cleanPhone}&text=${text}`;
-    const whatsappBusiness = `whatsapp-business://send?phone=${cleanPhone}&text=${text}`;
+    window.location.href = `whatsapp://send?phone=${cleanPhone}&text=${text}`;
 
-    // Web fallback
-    const webUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${text}`;
-
-    // Try normal WhatsApp first
-    window.location.href = whatsappApp;
-
-    // Try Business WhatsApp if normal app fails
     setTimeout(() => {
-      window.location.href = whatsappBusiness;
+      window.location.href = `whatsapp-business://send?phone=${cleanPhone}&text=${text}`;
     }, 800);
 
-    // Final fallback to browser
     setTimeout(() => {
-      window.open(webUrl, '_blank');
+      window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${text}`, '_blank');
     }, 1600);
   };
 
@@ -163,24 +219,146 @@ const DiamondFilterList: React.FC = () => {
   // ------------------------------
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Diamond Inventory
-      </Typography>
+      <Typography variant="h4">Diamond Inventory</Typography>
 
       <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} />
 
+      {/* SEARCH */}
       <TextField
         fullWidth
         size="small"
-        placeholder="Search..."
+        placeholder="Search diamonds..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        sx={{ mt: 2, mb: 2 }}
+        sx={{ mt: 2 }}
         InputProps={{
           startAdornment: <SearchIcon sx={{ mr: 1 }} />,
         }}
       />
 
+      {/* ACTIVE FILTERS */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, my: 2 }}>
+        {Object.entries(filters).map(([key, values]) =>
+          values.map((val) => (
+            <Chip
+              key={`${key}-${val}`}
+              label={`${key}: ${val}`}
+              onDelete={() => toggleFilter(key as keyof Filters, val)}
+            />
+          ))
+        )}
+      </Box>
+
+      {/* ================= SHAPE FILTER (YOUR ICONS) ================= */}
+      <Typography fontWeight={600} sx={{ mb: 1 }}>
+        Shape
+      </Typography>
+
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
+        {Object.entries(SHAPE_ICONS).map(([shape, icon]) => {
+          const active = filters.shape.includes(shape);
+
+          return (
+            <Box
+              key={shape}
+              onClick={() => toggleFilter('shape', shape)}
+              sx={{
+                width: 90,
+                height: 90,
+                border: '2px solid',
+                borderColor: active ? 'primary.main' : 'grey.300',
+                borderRadius: 2,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                bgcolor: active ? 'primary.light' : 'white',
+                transition: '0.2s',
+                '&:hover': { transform: 'scale(1.05)' },
+              }}
+            >
+              <img src={icon} alt={shape} style={{ width: 38, height: 38, objectFit: 'contain' }} />
+              <Typography variant="caption">{shape}</Typography>
+            </Box>
+          );
+        })}
+      </Box>
+
+      {/* COLOR */}
+      <Typography fontWeight={600} sx={{ mb: 1 }}>
+        Color
+      </Typography>
+
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
+        {['D', 'E', 'F', 'G', 'H'].map((color) => {
+          const active = filters.color.includes(color);
+
+          return (
+            <Box
+              key={color}
+              onClick={() => toggleFilter('color', color)}
+              sx={{
+                width: 60,
+                height: 60,
+                border: '2px solid',
+                borderColor: active ? 'primary.main' : '#ddd',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                borderRadius: 1,
+                cursor: 'pointer',
+                bgcolor: active ? 'primary.light' : 'white',
+              }}
+            >
+              {color}
+            </Box>
+          );
+        })}
+      </Box>
+
+      {/* CLARITY */}
+      <Typography fontWeight={600} sx={{ mb: 1 }}>
+        Clarity
+      </Typography>
+
+      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 3 }}>
+        {['IF', 'VVS1', 'VVS2', 'VS1', 'VS2', 'SI1'].map((c) => {
+          const active = filters.clarity.includes(c);
+
+          return (
+            // <Chip
+            //   key={c}
+            //   label={c}
+            //   onClick={() => toggleFilter('clarity', c)}
+            //   color={active ? 'primary' : 'default'}
+            //   variant={active ? 'filled' : 'outlined'}
+            // />
+            <Box
+              key={c}
+              onClick={() => toggleFilter('clarity', c)}
+              sx={{
+                width: 60,
+                height: 60,
+                border: '2px solid',
+                borderColor: active ? 'primary.main' : '#ddd',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold',
+                borderRadius: 1,
+                cursor: 'pointer',
+                bgcolor: active ? 'primary.light' : 'white',
+              }}
+            >
+              {c}
+            </Box>
+          );
+        })}
+      </Box>
+
+      {/* TABLE */}
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -191,16 +369,13 @@ const DiamondFilterList: React.FC = () => {
               <TableCell>Color</TableCell>
               <TableCell>Clarity</TableCell>
               <TableCell>Price</TableCell>
-              <TableCell />
-              {/* <TableCell>Certificate</TableCell>
-              <TableCell>Video</TableCell>
-              <TableCell>Chat</TableCell> */}
+              <TableCell>Action</TableCell>
             </TableRow>
           </TableHead>
 
           <TableBody>
             {filteredDiamonds.map((d) => (
-              <TableRow key={d.id} hover>
+              <TableRow key={d.id}>
                 <TableCell>{d.id}</TableCell>
                 <TableCell>{d.shape}</TableCell>
                 <TableCell>{d.carat}</TableCell>
@@ -208,47 +383,36 @@ const DiamondFilterList: React.FC = () => {
                 <TableCell>{d.clarity}</TableCell>
                 <TableCell>${d.price.toLocaleString()}</TableCell>
 
-                {/* Certificate */}
                 <TableCell>
-                  {d.certificate ? (
-                    <IconButton href={d.certificate} target="_blank" rel="noopener noreferrer">
+                  {d.certificate && (
+                    <IconButton href={d.certificate} target="_blank">
                       <PictureAsPdfIcon color="error" />
                     </IconButton>
-                  ) : (
-                    ''
                   )}
 
-                  {/* Video */}
-                  {d.video ? (
-                    <IconButton href={d.video} target="_blank" rel="noopener noreferrer">
+                  {d.video && (
+                    <IconButton href={d.video} target="_blank">
                       <VideoLibraryIcon color="primary" />
                     </IconButton>
-                  ) : (
-                    ''
                   )}
 
-                  {/* Chat Button */}
                   <Button
-                    color="primary"
-                    size="small"
                     startIcon={<ChatIcon />}
                     onClick={() => {
                       const message = `
-                                        Hi, I’m interested in this diamond:
+Hi, interested in diamond:
 
 ID: ${d.id}
 Shape: ${d.shape}
 Carat: ${d.carat}
 Color: ${d.color}
 Clarity: ${d.clarity}
-Price: $${d.price.toLocaleString()}
-    `.trim();
+Price: $${d.price}
+                      `.trim();
 
                       openWhatsApp('61404995273', message);
                     }}
-                  >
-                    {' '}
-                  </Button>
+                  />
                 </TableCell>
               </TableRow>
             ))}
@@ -260,6 +424,271 @@ Price: $${d.price.toLocaleString()}
 };
 
 export default DiamondFilterList;
+
+// import * as XLSX from 'xlsx';
+// import React, { useState, useMemo } from 'react';
+
+// import ChatIcon from '@mui/icons-material/Chat';
+// import SearchIcon from '@mui/icons-material/Search';
+// import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+// import VideoLibraryIcon from '@mui/icons-material/VideoLibrary';
+// import {
+//   Box,
+//   Typography,
+//   TextField,
+//   Table,
+//   TableBody,
+//   TableCell,
+//   TableContainer,
+//   TableHead,
+//   TableRow,
+//   Paper,
+//   IconButton,
+//   Button,
+// } from '@mui/material';
+
+// // ------------------------------
+// // TYPE
+// // ------------------------------
+// interface Diamond {
+//   id: number;
+//   origin: 'Natural' | 'Lab Grown';
+//   shape: string;
+//   carat: number;
+//   color: string;
+//   clarity: string;
+//   price: number;
+
+//   certificate?: string;
+//   video?: string;
+// }
+
+// // ------------------------------
+// // COLUMN MAP
+// // ------------------------------
+// const COLUMN_MAP: Record<string, string[]> = {
+//   id: ['id'],
+//   origin: ['origin', 'type'],
+//   shape: ['shape', 'cut'],
+//   carat: ['carat', 'weight', 'ct', 'crt'],
+//   color: ['color', 'colour'],
+//   clarity: ['clarity', 'purity'],
+//   price: ['price', 'amount', 'cost', 'rate', 'value', 'buy total price'],
+
+//   certificate: ['certificate', 'certificate url', 'cert'],
+//   video: ['video', 'video url', 'diamond video'],
+// };
+
+// // ------------------------------
+// // HELPERS
+// // ------------------------------
+// const normalizeKey = (key: string) => key.toLowerCase().replace(/\s+/g, '');
+
+// const findValue = (row: any, keys: string[]) => {
+//   for (const key of keys) {
+//     const normalized = normalizeKey(key);
+
+//     const matchKey = Object.keys(row).find((k) => normalizeKey(k) === normalized);
+
+//     if (matchKey && row[matchKey] !== undefined && row[matchKey] !== '') {
+//       return row[matchKey];
+//     }
+//   }
+//   return undefined;
+// };
+
+// // ------------------------------
+// // COMPONENT
+// // ------------------------------
+// const DiamondFilterList: React.FC = () => {
+//   const [diamonds, setDiamonds] = useState<Diamond[]>([]);
+//   const [searchQuery, setSearchQuery] = useState('');
+
+//   // ------------------------------
+//   // FILE UPLOAD
+//   // ------------------------------
+//   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+//     const file = event.target.files?.[0];
+//     if (!file) return;
+
+//     const reader = new FileReader();
+
+//     reader.onload = (e) => {
+//       const data = e.target?.result;
+//       if (!data) return;
+
+//       const workbook = XLSX.read(data, { type: 'binary' });
+//       const sheet = workbook.SheetNames[0];
+//       const jsonData: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[sheet]);
+
+//       const diamondData: Diamond[] = jsonData.map((row, index) => {
+//         const carat = findValue(row, COLUMN_MAP.carat);
+//         const price = findValue(row, COLUMN_MAP.price);
+
+//         return {
+//           id: Number(findValue(row, COLUMN_MAP.id)) || index + 1,
+//           origin: findValue(row, COLUMN_MAP.origin) || 'Natural',
+//           shape: findValue(row, COLUMN_MAP.shape) || '',
+//           carat: parseFloat(carat) || 0,
+//           color: findValue(row, COLUMN_MAP.color) || '',
+//           clarity: findValue(row, COLUMN_MAP.clarity) || '',
+//           price: parseFloat(price) || 0,
+
+//           certificate: findValue(row, COLUMN_MAP.certificate),
+//           video: findValue(row, COLUMN_MAP.video),
+//         };
+//       });
+
+//       setDiamonds(diamondData);
+//     };
+
+//     reader.readAsBinaryString(file);
+//   };
+
+//   // ------------------------------
+//   // FILTER
+//   // ------------------------------
+//   const filteredDiamonds = useMemo(() => {
+//     const q = searchQuery.toLowerCase();
+
+//     return diamonds.filter(
+//       (d) =>
+//         d.shape.toLowerCase().includes(q) ||
+//         d.color.toLowerCase().includes(q) ||
+//         d.clarity.toLowerCase().includes(q) ||
+//         d.carat.toString().includes(q)
+//     );
+//   }, [diamonds, searchQuery]);
+
+//   const openWhatsApp = (phone: string, message: string) => {
+//     const cleanPhone = phone.replace(/\D/g, '');
+//     const text = encodeURIComponent(message);
+
+//     // App URLs
+//     const whatsappApp = `whatsapp://send?phone=${cleanPhone}&text=${text}`;
+//     const whatsappBusiness = `whatsapp-business://send?phone=${cleanPhone}&text=${text}`;
+
+//     // Web fallback
+//     const webUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${text}`;
+
+//     // Try normal WhatsApp first
+//     window.location.href = whatsappApp;
+
+//     // Try Business WhatsApp if normal app fails
+//     setTimeout(() => {
+//       window.location.href = whatsappBusiness;
+//     }, 800);
+
+//     // Final fallback to browser
+//     setTimeout(() => {
+//       window.open(webUrl, '_blank');
+//     }, 1600);
+//   };
+
+//   // ------------------------------
+//   // UI
+//   // ------------------------------
+//   return (
+//     <Box sx={{ p: 3 }}>
+//       <Typography variant="h4" gutterBottom>
+//         Diamond Inventory
+//       </Typography>
+
+//       <input type="file" accept=".xlsx,.xls" onChange={handleFileUpload} />
+
+//       <TextField
+//         fullWidth
+//         size="small"
+//         placeholder="Search..."
+//         value={searchQuery}
+//         onChange={(e) => setSearchQuery(e.target.value)}
+//         sx={{ mt: 2, mb: 2 }}
+//         InputProps={{
+//           startAdornment: <SearchIcon sx={{ mr: 1 }} />,
+//         }}
+//       />
+
+//       <TableContainer component={Paper}>
+//         <Table>
+//           <TableHead>
+//             <TableRow>
+//               <TableCell>ID</TableCell>
+//               <TableCell>Shape</TableCell>
+//               <TableCell>Carat</TableCell>
+//               <TableCell>Color</TableCell>
+//               <TableCell>Clarity</TableCell>
+//               <TableCell>Price</TableCell>
+//               <TableCell />
+//               {/* <TableCell>Certificate</TableCell>
+//               <TableCell>Video</TableCell>
+//               <TableCell>Chat</TableCell> */}
+//             </TableRow>
+//           </TableHead>
+
+//           <TableBody>
+//             {filteredDiamonds.map((d) => (
+//               <TableRow key={d.id} hover>
+//                 <TableCell>{d.id}</TableCell>
+//                 <TableCell>{d.shape}</TableCell>
+//                 <TableCell>{d.carat}</TableCell>
+//                 <TableCell>{d.color}</TableCell>
+//                 <TableCell>{d.clarity}</TableCell>
+//                 <TableCell>${d.price.toLocaleString()}</TableCell>
+
+//                 {/* Certificate */}
+//                 <TableCell>
+//                   {d.certificate ? (
+//                     <IconButton href={d.certificate} target="_blank" rel="noopener noreferrer">
+//                       <PictureAsPdfIcon color="error" />
+//                     </IconButton>
+//                   ) : (
+//                     ''
+//                   )}
+
+//                   {/* Video */}
+//                   {d.video ? (
+//                     <IconButton href={d.video} target="_blank" rel="noopener noreferrer">
+//                       <VideoLibraryIcon color="primary" />
+//                     </IconButton>
+//                   ) : (
+//                     ''
+//                   )}
+
+//                   {/* Chat Button */}
+//                   <Button
+//                     color="primary"
+//                     size="small"
+//                     startIcon={<ChatIcon />}
+//                     onClick={() => {
+//                       const message = `
+//                                         Hi, I’m interested in this diamond:
+
+// ID: ${d.id}
+// Shape: ${d.shape}
+// Carat: ${d.carat}
+// Color: ${d.color}
+// Clarity: ${d.clarity}
+// Price: $${d.price.toLocaleString()}
+//     `.trim();
+
+//                       openWhatsApp('61404995273', message);
+//                     }}
+//                   >
+//                     {' '}
+//                   </Button>
+//                 </TableCell>
+//               </TableRow>
+//             ))}
+//           </TableBody>
+//         </Table>
+//       </TableContainer>
+//     </Box>
+//   );
+// };
+
+// export default DiamondFilterList;
+
+// ---------before filter --------------
 
 // import * as XLSX from 'xlsx';
 // import React, { useState, useMemo, useCallback } from 'react';

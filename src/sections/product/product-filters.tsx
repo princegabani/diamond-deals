@@ -20,6 +20,7 @@ import { ColorPicker } from 'src/components/color-utils';
 // ----------------------------------------------------------------------
 
 export type FiltersProps = {
+  shape: any;
   price: string;
   rating: string;
   gender: string[];
@@ -36,6 +37,11 @@ type ProductFiltersProps = {
   onResetFilter: () => void;
   onSetFilters: (updateState: Partial<FiltersProps>) => void;
   options: {
+    shape: {
+      icon: string | undefined;
+      value: string;
+      label: string;
+    }[];
     colors: string[];
     ratings: string[];
     categories: { value: string; label: string }[];
@@ -54,9 +60,41 @@ export function ProductFilters({
   onCloseFilter,
   onResetFilter,
 }: ProductFiltersProps) {
+  const renderShape = (
+    <Stack spacing={1}>
+      <Typography variant="subtitle2">Diamond Shape</Typography>
+
+      <FormGroup>
+        {options.shape.map((option) => (
+          <FormControlLabel
+            key={option.value}
+            control={
+              <Checkbox
+                checked={filters.shape.includes(option.value)}
+                onChange={() => {
+                  const checked = filters.shape.includes(option.value)
+                    ? filters.shape.filter((v: any) => v !== option.value)
+                    : [...filters.shape, option.value];
+
+                  onSetFilters({ shape: checked });
+                }}
+              />
+            }
+            label={
+              <Stack direction="row" spacing={1} alignItems="center">
+                <img src={option.icon} />
+                <span>{option.label}</span>
+              </Stack>
+            }
+          />
+        ))}
+      </FormGroup>
+    </Stack>
+  );
+
   const renderGender = (
     <Stack spacing={1}>
-      <Typography variant="subtitle2">Gender</Typography>
+      <Typography variant="subtitle2">Gender 1</Typography>
       <FormGroup>
         {options.genders.map((option) => (
           <FormControlLabel
@@ -219,6 +257,7 @@ export function ProductFilters({
 
         <Scrollbar>
           <Stack spacing={3} sx={{ p: 3 }}>
+            {renderShape}
             {renderGender}
             {renderCategory}
             {renderColors}

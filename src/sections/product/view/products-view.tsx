@@ -17,6 +17,15 @@ import type { FiltersProps } from '../product-filters';
 
 // ----------------------------------------------------------------------
 
+const SHAPE_OPTIONS = [
+  { value: 'round', label: 'Round', icon: '/icons/round.png' },
+  { value: 'princess', label: 'Princess', icon: '/icons/princess.png' },
+  { value: 'oval', label: 'Oval', icon: '/icons/oval.png' },
+  { value: 'emerald', label: 'Emerald', icon: '/icons/emerald.png' },
+  { value: 'pear', label: 'Pear', icon: '/icons/pear.png' },
+  { value: 'cushion', label: 'Cushion', icon: '/icons/cushion.png' },
+];
+
 const GENDER_OPTIONS = [
   { value: 'men', label: 'Men' },
   { value: 'women', label: 'Women' },
@@ -51,6 +60,7 @@ const COLOR_OPTIONS = [
 
 const defaultFilters = {
   price: '',
+  shape: [SHAPE_OPTIONS[0].value],
   gender: [GENDER_OPTIONS[0].value],
   colors: [COLOR_OPTIONS[4]],
   rating: RATING_OPTIONS[0],
@@ -117,6 +127,7 @@ export function ProductsView() {
             onCloseFilter={handleCloseFilter}
             onResetFilter={() => setFilters(defaultFilters)}
             options={{
+              shape: SHAPE_OPTIONS,
               genders: GENDER_OPTIONS,
               categories: CATEGORY_OPTIONS,
               ratings: RATING_OPTIONS,
