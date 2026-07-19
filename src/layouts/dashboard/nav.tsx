@@ -16,7 +16,7 @@ import { Logo } from 'src/components/logo';
 import { Scrollbar } from 'src/components/scrollbar';
 
 import { NavUpgrade } from '../components/nav-upgrade';
-import { WorkspacesPopover } from '../components/workspaces-popover';
+// import { WorkspacesPopover } from '../components/workspaces-popover';
 
 import type { NavItem } from '../nav-config-dashboard';
 import type { WorkspacesPopoverProps } from '../components/workspaces-popover';
@@ -112,11 +112,11 @@ export function NavContent({ data, slots, workspaces, sx }: NavContentProps) {
 
   return (
     <>
-      <Logo />
+      <Logo isSingle={false} sx={{ my: 2 }} />
 
       {slots?.topArea}
 
-      <WorkspacesPopover data={workspaces} sx={{ my: 2 }} />
+      {/* <WorkspacesPopover data={workspaces} sx={{ my: 2 }} /> */}
 
       <Scrollbar fillContent>
         <Box
@@ -185,10 +185,8 @@ export function NavContent({ data, slots, workspaces, sx }: NavContentProps) {
           </Box>
         </Box>
       </Scrollbar>
-
       {slots?.bottomArea}
-
-      <NavUpgrade />
+      {/* <NavUpgrade /> */}
     </>
   );
 }

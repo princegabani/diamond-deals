@@ -9,6 +9,7 @@ import { styled, useTheme } from '@mui/material/styles';
 import { RouterLink } from 'src/routes/components';
 
 import { logoClasses } from './classes';
+import fullLogoPandora from './logo.png';
 import singleLogoPandora from './Vector.png';
 
 // ----------------------------------------------------------------------
@@ -18,14 +19,7 @@ export type LogoProps = LinkProps & {
   disabled?: boolean;
 };
 
-export function Logo({
-  sx,
-  disabled,
-  className,
-  href = '/',
-  isSingle = true,
-  ...other
-}: LogoProps) {
+export function Logo({ sx, disabled, className, href = '/', isSingle, ...other }: LogoProps) {
   const theme = useTheme();
 
   const gradientId = useId();
@@ -165,6 +159,8 @@ export function Logo({
     </svg>
   );
 
+  console.log(isSingle);
+
   return (
     <LogoRoot
       component={RouterLink}
@@ -176,7 +172,7 @@ export function Logo({
         {
           width: 40,
           height: 40,
-          ...(!isSingle && { width: 102, height: 36 }),
+          ...(!isSingle && { width: 'auto', height: 'auto' }),
           ...(disabled && { pointerEvents: 'none' }),
         },
         ...(Array.isArray(sx) ? sx : [sx]),
@@ -184,10 +180,11 @@ export function Logo({
       {...other}
     >
       {/* {isSingle ? singleLogoPandora : fullLogo} */}
+
       {isSingle ? (
         <img src={singleLogoPandora} alt="Logo" style={{ width: '100%', height: '100%' }} />
       ) : (
-        fullLogo
+        <img src={fullLogoPandora} alt="Logo" style={{ width: '100%', height: '100%' }} />
       )}
     </LogoRoot>
   );

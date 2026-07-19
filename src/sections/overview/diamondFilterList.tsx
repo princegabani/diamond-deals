@@ -400,7 +400,7 @@ const DiamondFilterList: React.FC = () => {
                     startIcon={<ChatIcon />}
                     onClick={() => {
                       const message = `
-Hi, interested in diamond:
+Hi Pandora Diamond, I'm interested in:
 
 ID: ${d.id}
 Shape: ${d.shape}
